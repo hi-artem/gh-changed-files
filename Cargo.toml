@@ -1,11 +1,11 @@
 [package]
-name = "gh-pr-commenter"
+name = "gh-changed-files"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 octocrab = "0.17"
 tokio = { version = "1", features = ["full"] }
 regex = "1"
+clap = { version = "4.0.19", features = ["derive"] }
+serde_json = "1"
