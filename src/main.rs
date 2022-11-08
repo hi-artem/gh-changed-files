@@ -11,25 +11,43 @@ struct Args {
    organization: String,
    #[arg(short)]
    repository: String,
-   #[arg(short)]
+   #[arg(short, default_value_t = 0)]
    pull_request: u64,
    #[arg(short, default_value = ".*")]
    directories_regex: String,
+   #[arg(short, default_value = "")]
+   commit: String,
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     let token = std::env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN env variable is required");
-    let dir_regex = args.directories_regex;
+    let mut pull_request = args.pull_request;
 
     let octocrab = Octocrab::builder().personal_token(token).build()?;
+
+    if pull_request == 0 {
+        assert_ne!(args.commit, "", "Provide commit SHA");
+
+        let page = octocrab
+            .repos(&args.organization, &args.repository)
+            .list_pulls(args.commit)
+            .send()
+            .await?;
+        assert_eq!(page.items.len(), 1, "Found {} PRs for commit", page.items.len());
+
+        for pr in &page {
+            pull_request = pr.number;
+        }
+    }
+
     let mut page = octocrab
-        .pulls(args.organization, args.repository)
-        .list_files(args.pull_request)
+        .pulls(&args.organization, &args.repository)
+        .list_files(pull_request)
         .await?;
     let mut vec = Vec::new();
-    let re = Regex::new(&dir_regex).unwrap();
+    let re = Regex::new(&args.directories_regex).unwrap();
 
     loop {
         for issue in &page {
